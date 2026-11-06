@@ -830,12 +830,12 @@ const vistaDemo = () => {
   const cabeza = '<div class="seg" role="group" aria-label="Qué mostrar" style="margin-bottom:12px"><button data-act="metrica" data-v="msgs" aria-pressed="' + esMsg + '">Mensajes</button><button data-act="metrica" data-v="ventas" aria-pressed="' + !esMsg + '">Ventas (MXN)</button></div>';
   const hp = heatPanel(c, 'heat', false);
   const canales = top4(c.canal, k => L.CANALES[k].nombre); const ccol = canales.map((x, i) => [CANAL_COLOR.instagram, CANAL_COLOR.facebook, CANAL_COLOR.whatsapp, CANAL_COLOR.otros, CANAL_COLOR.otros][i]);
-  const sec = (id, t, items, col, fmt) => panelGrafica(id, t, '', barras(items, col, fmt), tablaHtml([t, 'Mensajes'], items.map(i => [i[0], L.fmtInt(i[1])])));
+  const sec = (id, t, items, col, fmt, unidad = 'Mensajes') => panelGrafica(id, t, '', barras(items, col, fmt), tablaHtml([t, unidad], items.map(i => [i[0], L.fmtInt(i[1])])));
   const vacio = !w.posts.length ? '<div class="panel empty"><h2>Tu espacio está vacío</h2><p style="margin:8px 0 16px">Crea tu primera publicación con su enlace de WhatsApp y empieza a medir.</p><a class="btn pri" href="#crear">Crear mi primera publicación</a></div>' : '';
   return '<div class="wrap stack" style="padding-top:20px">' + vacio + filtros() + kpiTiles(c, p) + kpiRedes(rc, rp) +
     '<div class="grid main2">' + panelGrafica('main', 'Mensajes y ventas en el tiempo', 'Cada punto es un día. Los picos de quincena (días 15 y 30) son normales.', cabeza + graf, tabla) + feedPanel(w, true) + '</div>' +
     panelGrafica('heat', 'Cuándo te escriben', hp.consejo, hp.c, hp.tabla) +
-    '<div class="grid g3">' + sec('b-canal', 'Por canal', canales, ccol) + sec('b-estado', 'Por estado de la República', top4(c.estado), null) + sec('b-pago', 'Por forma de pago', top4(c.pago), null) + '</div>' +
+    '<div class="grid g3">' + sec('b-canal', 'Por canal', canales, ccol) + sec('b-estado', 'Por estado de la República', top4(c.estado), null) + sec('b-pago', 'Por forma de pago (ventas)', top4(c.pago), null, undefined, 'Ventas') + '</div>' +
     rankingPanel(w, c) +
     '<div class="panel"><h3>Lo que Pregón no puede medir</h3><p class="muted" style="margin-top:6px">La lectura automática de alcance, “me gusta” y clics: <b>No disponible</b> todavía. Cada red solo los entrega con una conexión autorizada, y un enlace de WhatsApp no avisa cuántas personas lo tocan. Por eso los capturas tú (en Publicaciones, a mano o por CSV) y se muestran marcados como capturados. Los mensajes y ventas sí se miden con el código de referencia.' + (S.ws === 'demo' ? ' Los datos de este espacio son de demostración, generados con una semilla fija.' : '') + '</p></div></div>';
 };
@@ -1017,7 +1017,7 @@ const ACT = {
     const cal = []; w.posts.forEach(p => (p.canales || []).forEach(c => cal.push(L.filaCalendario(p, L.CANALES[c].nombre, (p.textos || {})[c] || ''))));
     let nombre, cont, mime;
     if (tipo === 'csv') { nombre = 'pregon-calendario.csv'; cont = L.aCSV(L.COLS_CAL, cal); mime = 'text/csv;charset=utf-8'; }
-    else { const fin = HOY(); const ventas = w.msgs.filter(m => m.venta > 0 && m.di > fin - 90).sort((a, b) => a.ts - b.ts).map(m => L.filaVenta(m, w.byId[m.postId])); nombre = 'pregon-contador.xls'; cont = L.aExcel([{ nombre: 'Calendario', cols: L.COLS_CAL, filas: cal }, { nombre: 'Ventas (90 días)', cols: L.COLS_VENTAS, filas: ventas, dinero: [4, 5, 6] }]); mime = 'application/vnd.ms-excel'; }
+    else { const fin = HOY(); const ventas = w.msgs.filter(m => m.venta > 0 && m.di > fin - 90).sort((a, b) => a.ts - b.ts).map(m => L.filaVenta(Object.assign({}, m, { canal: L.CANALES[m.canal].nombre }), w.byId[m.postId])); nombre = 'pregon-contador.xls'; cont = L.aExcel([{ nombre: 'Calendario', cols: L.COLS_CAL, filas: cal }, { nombre: 'Ventas (90 días)', cols: L.COLS_VENTAS, filas: ventas, dinero: [4, 5, 6] }]); mime = 'application/vnd.ms-excel'; }
     const r = await Store.descargar(nombre, cont, mime);
     if (r !== 'guardado') copiar(cont, 'Tu navegador no permite descargar aquí. Copié el contenido: pégalo en un archivo ' + nombre.split('.').pop() + '.'); else toast('Archivo listo: ' + nombre);
   },
