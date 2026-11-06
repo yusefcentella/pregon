@@ -26,4 +26,4 @@ ${r('ui.js')}
 </script>
 </body>
 </html>`;
-fs.mkdirSync('dist',{recursive:true});fs.writeFileSync('dist/index.html',html);console.log('dist/index.html',html.length,'bytes');
+fs.mkdirSync('dist',{recursive:true});fs.writeFileSync('dist/index.html',html);fs.mkdirSync('docs',{recursive:true});fs.writeFileSync('docs/index.html',html);fs.writeFileSync('docs/.nojekyll','');console.log('dist/index.html y docs/index.html',html.length,'bytes');

@@ -27,6 +27,16 @@ Publica y sabe qué publicación te trae las ventas por WhatsApp. Versión para 
 
 Fuentes: Google Fonts (Bricolage Grotesque y Figtree).
 
+## Publicar en GitHub Pages (sin Claude)
+
+La página es un solo archivo estático. `node build.cjs` lo escribe en `dist/index.html` y en `docs/index.html`.
+
+1. Sube los cambios a `main`.
+2. En GitHub: Settings, Pages, Source: "Deploy from a branch", Branch: `main`, carpeta `/docs`, Save.
+3. En un par de minutos queda en `https://TU-USUARIO.github.io/pregon/`.
+
+Fuera de Claude no hay base de datos: cada visitante guarda sus datos en su navegador, no se cuentan visitas de todos y `/metricas` solo muestra lo de ese navegador. Ver "Qué depende de Claude".
+
 ## Límites conocidos
 
 - Pregón **no publica** en redes ni envía mensajes de WhatsApp. Genera textos y enlaces `wa.me`.
