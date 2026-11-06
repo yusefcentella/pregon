@@ -176,6 +176,27 @@ const L = (() => {
     return { ok: true, datos: d, wa, ref: d.ref, resultados, todoOk: resultados.every(r => r.ok) };
   };
 
+  // ---- Guion para reel / video corto (reglas, sin IA) ----
+  const guionReel = input => {
+    const v = validarEntrada(input); if (!v.ok) return { ok: false, errores: v.errores };
+    const d = v.datos; const tono = TONOS[d.tono]; const oc = OCASIONES.find(x => x.id === d.ocasion) || OCASIONES[0];
+    const tel = fmtTel(d.tel); const precio = d.precio !== null ? 'Cuesta solo ' + fmtMXN(d.precio) + ', IVA incluido.' : '';
+    const ganchos = [tono.ap(d.producto), '¿Buscas ' + d.producto + '? Mira esto.', oc.linea || 'Esto es lo que tenemos hoy: ' + d.producto + '.'];
+    const escenas = [
+      { tiempo: '0 a 3 s', nombre: 'Gancho', imagen: 'Primer plano del producto, bien iluminado y sin nada que estorbe.', pantalla: d.producto, voz: ganchos[0] },
+      { tiempo: '3 a 10 s', nombre: 'El producto', imagen: 'Tres tomas cortas: de cerca, en tu mano y cómo se usa o se prepara.', pantalla: d.descripcion ? d.descripcion.slice(0, 60) : 'Hecho en ' + (String(d.ciudad).split(',')[0] || 'México'), voz: [d.descripcion || 'Mira cómo se ve de cerca.', oc.linea].filter(Boolean).join(' ') },
+      { tiempo: '10 a 18 s', nombre: 'Precio y oferta', imagen: 'El producto en cuadro y el precio escrito grande, bien legible.', pantalla: [d.precio !== null ? fmtMXN(d.precio) + ' IVA incluido' : '', d.oferta].filter(Boolean).join(' · ') || 'Pregunta por precio', voz: [precio, d.oferta].filter(Boolean).join(' ') || 'Pregúntanos por el precio y la disponibilidad.' },
+      { tiempo: '18 a 25 s', nombre: 'Cierre', imagen: 'Tú o tu producto mirando a la cámara. Deja la pantalla quieta 2 segundos para que se alcance a leer.', pantalla: 'WhatsApp ' + tel + ' · ref ' + d.ref, voz: tono.cta + ' por WhatsApp al ' + tel + ' y menciona ' + d.ref + '.' }
+    ];
+    const tags = hashtags(d.producto, d.ciudad, d.ocasion, 5).join(' ');
+    const pie = [ganchos[0], d.descripcion, d.oferta, oc.linea, d.precio !== null ? 'Solo ' + fmtMXN(d.precio) + ' (IVA incluido).' : '', tono.cta + ' por WhatsApp al ' + tel + ' y menciona ' + d.ref + '.', d.clabe ? 'Pago por transferencia SPEI. CLABE: ' + d.clabe + '.' : '', tags].filter(Boolean).join('\n');
+    const consejos = ['Graba en vertical (9:16) y que dure entre 15 y 30 segundos.', 'Activa los subtítulos: mucha gente ve los videos sin sonido.', 'Graba cerca de una ventana con luz natural y limpia el lente.', 'Usa música de la biblioteca de la propia red para evitar problemas de derechos.', 'Pon el mismo código ' + d.ref + ' en el video y en el pie: así sabrás qué video vende.', 'Publícalo en el horario en que más te escriben (mira el mapa “Cuándo te escriben”).'];
+    const texto = ['GUION DE REEL: ' + d.producto + ' (ref ' + d.ref + ')', '', 'Ganchos para elegir:'].concat(ganchos.map((g, i) => (i + 1) + '. ' + g), ['']).concat(escenas.map(e => e.tiempo + ' · ' + e.nombre + '\n  Graba: ' + e.imagen + '\n  Pantalla: ' + e.pantalla + '\n  Di: ' + e.voz), ['', 'PIE DEL VIDEO:', pie, '', 'CONSEJOS:'], consejos.map(c => '- ' + c)).join('\n');
+    return { ok: true, ref: d.ref, ganchos, escenas, pie, pieMax: 2200, pieOk: pie.length <= 2200, consejos, texto };
+  };
+  const FOTO_MAX = 150000;
+  const fotoValida = s => typeof s === 'string' && s.length <= FOTO_MAX && /^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(s);
+
   // ---- CSV de catálogo ----
   const parseCSVFilas = (texto, delim) => {
     const filas = []; let fila = [], cel = '', q = false;
@@ -247,7 +268,7 @@ const L = (() => {
   const COLS_VENTAS = ['Fecha', 'Canal', 'Publicación', 'Referencia', 'Total MXN (IVA incluido)', 'Subtotal sin IVA (referencial 16 %)', 'IVA (referencial 16 %)', 'Forma de pago', 'Estado de la República'];
   const filaVenta = (m, p) => { const sub = Math.round(m.venta / 1.16 * 100) / 100; return [fmtDate(idxKey(m.di)), m.canal, p ? p.producto : '', p ? p.ref : '', m.venta, sub, Math.round((m.venta - sub) * 100) / 100, m.pago || '', m.estado || '']; };
 
-  return { pad, fmtInt, fmtMXN, fmtPct, dayIdx, idxKey, keyIdx, fmtDate, fmtShort, parseDate, parseHour, mx, msOf, fmtTime, DIAS, parseMoney, rfcDigito, validarRFC, conDigitoRFC, clabeDigito, validarCLABE, conDigitoCLABE, validarTel, validarCP, REGIMENES, maskRFC, maskTel, maskCLABE, fmtTel, ESTADOS, CANALES, OCASIONES, TONOS, hashtags, waLink, refCode, validarEntrada, generar, importarCSV, CAMPOS_RES, parseEntero, canalDe, importarResultadosCSV, aCSV, aExcel, COLS_CAL, filaCalendario, COLS_VENTAS, filaVenta, sinAcentos };
+  return { pad, fmtInt, fmtMXN, fmtPct, dayIdx, idxKey, keyIdx, fmtDate, fmtShort, parseDate, parseHour, mx, msOf, fmtTime, DIAS, parseMoney, rfcDigito, validarRFC, conDigitoRFC, clabeDigito, validarCLABE, conDigitoCLABE, validarTel, validarCP, REGIMENES, maskRFC, maskTel, maskCLABE, fmtTel, ESTADOS, CANALES, OCASIONES, TONOS, hashtags, waLink, refCode, validarEntrada, generar, guionReel, fotoValida, FOTO_MAX, importarCSV, CAMPOS_RES, parseEntero, canalDe, importarResultadosCSV, aCSV, aExcel, COLS_CAL, filaCalendario, COLS_VENTAS, filaVenta, sinAcentos };
 })();
 
 /* ===== AUTOVERIFICACIÓN =====
@@ -285,6 +306,14 @@ const autoverificar = () => {
   caso('Importar resultados de las redes (CSV)',
     { ok: true, filas: [{ ref: 'DD-100', canal: 'instagram', alcance: 1250, likes: 87, comentarios: 6, guardados: 12, clics: null }, { ref: 'DD-100', canal: 'whatsapp', alcance: 430, likes: null, comentarios: null, guardados: null, clics: 9 }], error: 'Fila 2: la referencia «ZZ-1» no existe en tus publicaciones.' },
     () => { const a = L.importarResultadosCSV('referencia,canal,alcance,me_gusta,comentarios,guardados,clics\r\nDD-100,Instagram,"1,250",87,6,12,\r\nDD-100,WhatsApp Estado,430,,,,9\r\n', ['DD-100']); const b = L.importarResultadosCSV('referencia,canal,alcance\nZZ-1,Instagram,10\n', ['DD-100']); return { ok: a.ok, filas: a.filas, error: b.errores[0] }; });
+
+  caso('Guion para reel',
+    { escenas: 4, ganchos: 3, ref: true, precio: true, cta: true, pieOk: true, sinPrecio: false },
+    () => { const g = L.guionReel({ ...base, oferta: 'Lleva 2 por $149.00', canales: ['instagram'] }); const h = L.guionReel({ ...base, precio: '' }); return { escenas: g.escenas.length, ganchos: g.ganchos.length, ref: g.texto.includes('DD-7K2M') && g.pie.includes('DD-7K2M'), precio: g.pie.includes('$89.50') && g.escenas[2].voz.includes('$89.50'), cta: g.escenas[3].voz.includes('(461) 000 0123') || g.escenas[3].voz.includes('461'), pieOk: g.pieOk, sinPrecio: h.pie.includes('$') }; });
+
+  caso('Foto del producto (formato y tamaño)',
+    { ok: true, png: false, grande: false, texto: false, nulo: false },
+    () => ({ ok: L.fotoValida('data:image/jpeg;base64,/9j/4AAQSkZJRg=='), png: L.fotoValida('data:image/png;base64,iVBORw0KGgo='), grande: L.fotoValida('data:image/jpeg;base64,' + 'A'.repeat(L.FOTO_MAX)), texto: L.fotoValida('http://sitio.com/foto.jpg'), nulo: L.fotoValida(null) }));
 
   caso('Código de referencia automático',
     { formato: true, estable: true, distinto: true },

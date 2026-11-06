@@ -11,7 +11,7 @@ const Store = (() => {
   const mem = {};
   const ls = {
     get(k) { try { const v = localStorage.getItem(k); return v === null ? (mem[k] ?? null) : JSON.parse(v); } catch (e) { return mem[k] ?? null; } },
-    set(k, v) { mem[k] = v; try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* sin almacenamiento: queda en memoria */ } }
+    set(k, v) { mem[k] = v; try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; /* sin almacenamiento: queda en memoria */ } }
   };
   const caps = { db: null, user: null, sample: null, downloads: null, owner: false, platform: false, listo: false };
   const rows = snap => (snap && snap.docs ? snap.docs : Array.isArray(snap) ? snap : []).map(d => (d && typeof d.data === 'function' ? d.data() : d));
@@ -31,11 +31,12 @@ const Store = (() => {
   const cargarEspacio = id => Object.assign(vacio(), ls.get('pregon:v1:ws:' + id) || {});
   let pendiente = null;
   const guardarEspacio = (id, data) => {
-    ls.set('pregon:v1:ws:' + id, data);
+    const ok = ls.set('pregon:v1:ws:' + id, data);
     if (id !== 'demo' && caps.db) {
       clearTimeout(pendiente);
-      pendiente = setTimeout(async () => { try { await caps.db.doc('espacios/' + id).set({ json: JSON.stringify(data), t: Date.now() }); } catch (e) { /* se queda en este navegador */ } }, 600);
+      pendiente = setTimeout(async () => { try { await caps.db.doc('espacios/' + id).set({ json: JSON.stringify(data, (k, v) => k === 'foto' ? undefined : v), t: Date.now() }); } catch (e) { /* se queda en este navegador */ } }, 600);
     }
+    return ok;
   };
   const traerEspacioRemoto = async id => {
     if (!caps.db || id === 'demo') return null;

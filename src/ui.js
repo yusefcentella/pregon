@@ -13,7 +13,7 @@ const FOUNDER_MES = 219;
 const descuentoFundador = () => Math.round((1 - FOUNDER_MES / PLANES[1].mes) * 100);
 
 const S = { route: 'inicio', ws: 'demo', rango: '30', custom: null, canal: 'todos', comparar: true, metrica: 'msgs', open: null, tab: 'uno', anual: false, flash: null, nuevoId: null, keep: false, msgDraft: null };
-let SEEDC = null; const REALS = {}; let GEN = null; let RESTORE = null; let SC = null; let CHARTS = {};
+let SEEDC = null; const REALS = {}; let GEN = null; let RESTORE = null; let UNDO = null; let REEL = null; let SC = null; let CHARTS = {};
 
 /* ---- espacios ---- */
 const seedDemo = () => { if (!SEEDC) { const posts = buildDemoPosts(); const msgs = buildDemoMsgs(posts, Math.max(L.keyIdx('2026-11-05'), HOY()), Date.now()); SEEDC = { posts, msgs, met: buildDemoMetricas(posts, msgs, HOY()) }; } return SEEDC; };
@@ -75,6 +75,7 @@ const THUMBS = {
   play: '<rect x="8" y="14" width="48" height="36" rx="8" fill="#4FC3A1"/><path d="M27 23l16 9-16 9z" fill="#0F1611"/>'
 };
 const thumb = (kind, cls = '') => '<svg class="thumb ' + cls + '" viewBox="0 0 64 64" role="img" aria-label="Ilustración del producto">' + (THUMBS[kind] || THUMBS.candy) + '</svg>';
+const thumbP = p => p && L.fotoValida(p.foto) ? '<img class="thumb" src="' + p.foto + '" alt="Foto de ' + esc(p.producto) + '">' : thumb((p && p.kind) || 'candy');
 const adivinaKind = t => { const s = L.sinAcentos(t.toLowerCase()); return /cajeta|miel|mermelada/.test(s) ? 'jar' : /oblea|galleta|pan/.test(s) ? 'wafer' : /calaver/.test(s) ? 'skull' : /calabaza/.test(s) ? 'pumpkin' : /caja|paquete|combo|regalo/.test(s) ? 'box' : /envio/.test(s) ? 'truck' : /video/.test(s) ? 'play' : /coco|jamoncillo/.test(s) ? 'coco' : 'candy'; };
 
 /* ---- gráficas ---- */
@@ -123,15 +124,15 @@ const feedPanel = (w, accion) => {
   const items = feedItems(w);
   const li = items.map((x, k) => {
     const nuevo = S.nuevoId && ((x.m && x.m.id === S.nuevoId) || (x.pub && x.pub.id === S.nuevoId));
-    if (x.pub) return '<li class="real' + (nuevo ? ' nuevo' : '') + '">' + thumb(x.pub.kind || 'candy') + '<div><b>Publicación creada</b><br><span class="muted">' + esc(x.pub.producto) + ' · ' + x.pub.canales.map(c => L.CANALES[c].nombre).join(', ') + '</span></div><span class="t" data-ts="' + x.ts + '" data-real="1">' + relLabel(x.ts, true) + '</span></li>';
+    if (x.pub) return '<li class="real' + (nuevo ? ' nuevo' : '') + '">' + thumbP(x.pub) + '<div><b>Publicación creada</b><br><span class="muted">' + esc(x.pub.producto) + ' · ' + x.pub.canales.map(c => L.CANALES[c].nombre).join(', ') + '</span></div><span class="t" data-ts="' + x.ts + '" data-real="1">' + relLabel(x.ts, true) + '</span></li>';
     const m = x.m, cn = L.CANALES[m.canal].nombre;
-    return '<li class="' + (m.real ? 'real' : '') + (nuevo ? ' nuevo' : '') + '">' + thumb(x.p ? x.p.kind : 'candy') + '<div>' + (m.venta > 0 ? '<b>Venta de ' + L.fmtMXN(m.venta) + '</b> · ' + esc(m.pago) : '<b>Mensaje nuevo</b>') + '<br><span class="muted">' + cn + ' · ' + esc(x.p ? x.p.producto : 'Publicación') + (m.estado ? ' · ' + esc(m.estado) : '') + '</span></div><span class="t" data-ts="' + x.ts + '" data-real="' + (m.real ? 1 : 0) + '">' + relLabel(x.ts, m.real) + '</span></li>';
+    return '<li class="' + (m.real ? 'real' : '') + (nuevo ? ' nuevo' : '') + '">' + thumbP(x.p) + '<div>' + (m.venta > 0 ? '<b>Venta de ' + L.fmtMXN(m.venta) + '</b> · ' + esc(m.pago) : '<b>Mensaje nuevo</b>') + '<br><span class="muted">' + cn + ' · ' + esc(x.p ? x.p.producto : 'Publicación') + (m.estado ? ' · ' + esc(m.estado) : '') + '</span></div><span class="t" data-ts="' + x.ts + '" data-real="' + (m.real ? 1 : 0) + '">' + relLabel(x.ts, m.real) + '</span></li>';
   }).join('');
   return '<section class="panel" aria-label="Actividad en vivo"><div class="phead"><div><h2>Actividad en vivo</h2><p class="muted" style="font-size:14px">Mensajes y ventas de los últimos 4 días</p></div>' + (accion ? '<button class="btn sm pri" data-act="regMsg">Registrar un mensaje</button>' : '') + '</div><ul class="feed" id="feed" aria-live="polite">' + (li || '<li><span></span><span class="muted">Todavía no hay actividad. Registra tu primer mensaje.</span><span></span></li>') + '</ul></section>';
 };
 const rankingPanel = (w, ag) => {
   const rows = Object.entries(ag.post).filter(([id]) => w.byId[id]).sort((a, b) => b[1].v - a[1].v || b[1].n - a[1].n).slice(0, 6);
-  const filas = rows.map(([id, s]) => { const p = w.byId[id]; return '<tr><td>' + thumb(p.kind || 'candy') + '</td><td><b>' + esc(p.producto) + '</b><br><span class="muted">' + esc(p.categoria || 'Producto') + ' · ' + esc(p.ref) + '</span></td><td class="r num">' + L.fmtInt(s.n) + '</td><td class="r num">' + L.fmtMXN(s.v) + '</td><td class="r num">' + (s.n ? L.fmtPct(s.nv / s.n * 100) : '0.0 %') + '</td></tr>'; }).join('');
+  const filas = rows.map(([id, s]) => { const p = w.byId[id]; return '<tr><td>' + thumbP(p) + '</td><td><b>' + esc(p.producto) + '</b><br><span class="muted">' + esc(p.categoria || 'Producto') + ' · ' + esc(p.ref) + '</span></td><td class="r num">' + L.fmtInt(s.n) + '</td><td class="r num">' + L.fmtMXN(s.v) + '</td><td class="r num">' + (s.n ? L.fmtPct(s.nv / s.n * 100) : '0.0 %') + '</td></tr>'; }).join('');
   return '<section class="panel" aria-label="Ranking de publicaciones"><div class="phead"><div><h2>Las publicaciones que más venden</h2><p class="muted" style="font-size:14px">Según las ventas que llegaron con su código de referencia</p></div></div><div class="tw"><table><thead><tr><th></th><th>Publicación</th><th class="r">Mensajes</th><th class="r">Ventas</th><th class="r">Cierre</th></tr></thead><tbody>' + (filas || '<tr><td colspan="5" class="muted">Sin ventas en este periodo.</td></tr>') + '</tbody></table></div></section>';
 };
 
@@ -178,13 +179,15 @@ const alcDe = (w, p) => { const v = (p.canales || []).map(c => w.met[p.id + '|' 
 const panelRes = (w, p) => '<h3 style="margin:16px 0 6px">Resultados en la red' + (w.meta.demo ? ' <span class="chip acc">Demo</span>' : '') + '</h3><p class="hint" style="margin-bottom:8px">Cópialos de las estadísticas de cada red. Déjalos vacíos si no los tienes: se mostrarán como “No disponible”.</p><div class="tw"><table><thead><tr><th>Canal</th>' + L.CAMPOS_RES.map(x => '<th>' + x[1] + '</th>').join('') + '</tr></thead><tbody>' + (p.canales || []).map(c => { const m = w.met[p.id + '|' + c] || {}; return '<tr><td>' + L.CANALES[c].nombre + '</td>' + L.CAMPOS_RES.map(([f, n]) => '<td><label class="sr" for="m-' + p.id + c + f + '">' + n + ' en ' + L.CANALES[c].nombre + '</label><input id="m-' + p.id + c + f + '" data-chg="res" data-id="' + p.id + '" data-c="' + c + '" data-f="' + f + '" value="' + (m[f] === null || m[f] === undefined ? '' : m[f]) + '" inputmode="numeric" style="width:96px" placeholder="—"></td>').join('') + '</tr>'; }).join('') + '</tbody></table></div>';
 const vistaPublicaciones = () => {
   const w = getWS(S.ws); const ag = agregar(w, 0, HOY(), 'todos');
+  const clave = p => L.sinAcentos(String(p.producto).toLowerCase().trim()) + '|' + p.fecha; const cuenta = {}; w.posts.forEach(p => cuenta[clave(p)] = (cuenta[clave(p)] || 0) + 1);
   const lista = [...w.posts].sort((x, y) => (y.fecha + (y.hora || '')).localeCompare(x.fecha + (x.hora || '')));
   const filas = lista.map(p => {
     const s = ag.post[p.id] || { n: 0, v: 0 }; const ab = S.open === p.id;
-    let r = '<tr><td>' + thumb(p.kind || 'candy') + '</td><td style="min-width:200px"><label class="sr" for="e-t-' + p.id + '">Nombre</label><input id="e-t-' + p.id + '" data-chg="edit" data-id="' + p.id + '" data-f="producto" value="' + esc(p.producto) + '"></td><td style="min-width:90px"><label class="sr" for="e-p-' + p.id + '">Precio</label><input id="e-p-' + p.id + '" data-chg="edit" data-id="' + p.id + '" data-f="precio" value="' + (p.precio === null || p.precio === undefined ? '' : p.precio.toFixed(2)) + '" inputmode="decimal" placeholder="Sin precio"></td><td style="min-width:120px"><label class="sr" for="e-d-' + p.id + '">Fecha</label><input id="e-d-' + p.id + '" data-chg="edit" data-id="' + p.id + '" data-f="fecha" value="' + L.fmtDate(p.fecha) + '" inputmode="numeric"></td><td><label class="sr" for="e-s-' + p.id + '">Estado</label><select id="e-s-' + p.id + '" data-chg="edit" data-id="' + p.id + '" data-f="estado" style="min-width:170px">' + ['Borrador', 'Lista para publicar', 'Publicada'].map(o => '<option' + (p.estado === o ? ' selected' : '') + '>' + o + '</option>').join('') + '</select></td><td class="mono">' + esc(p.ref) + '</td><td class="r num">' + alcDe(w, p) + '</td><td class="r num">' + L.fmtInt(s.n) + '</td><td class="r num">' + L.fmtMXN(s.v) + '</td><td><button class="btn sm" data-act="abrirFila" data-id="' + p.id + '" aria-expanded="' + ab + '">Textos</button></td></tr>';
+    const dup = (cuenta[clave(p)] || 0) > 1; const esReal = w.R.posts.some(x => x.id === p.id);
+    let r = '<tr><td>' + thumbP(p) + '</td><td style="min-width:200px"><label class="sr" for="e-t-' + p.id + '">Nombre</label><input id="e-t-' + p.id + '" data-chg="edit" data-id="' + p.id + '" data-f="producto" value="' + esc(p.producto) + '">' + (dup ? '<span class="chip acc" title="Hay otra publicación con el mismo nombre y fecha">Posible duplicado</span>' : '') + '</td><td style="min-width:90px"><label class="sr" for="e-p-' + p.id + '">Precio</label><input id="e-p-' + p.id + '" data-chg="edit" data-id="' + p.id + '" data-f="precio" value="' + (p.precio === null || p.precio === undefined ? '' : p.precio.toFixed(2)) + '" inputmode="decimal" placeholder="Sin precio"></td><td style="min-width:120px"><label class="sr" for="e-d-' + p.id + '">Fecha</label><input id="e-d-' + p.id + '" data-chg="edit" data-id="' + p.id + '" data-f="fecha" value="' + L.fmtDate(p.fecha) + '" inputmode="numeric"></td><td><label class="sr" for="e-s-' + p.id + '">Estado</label><select id="e-s-' + p.id + '" data-chg="edit" data-id="' + p.id + '" data-f="estado" style="min-width:170px">' + ['Borrador', 'Lista para publicar', 'Publicada'].map(o => '<option' + (p.estado === o ? ' selected' : '') + '>' + o + '</option>').join('') + '</select></td><td class="mono">' + esc(p.ref) + '</td><td class="r num">' + alcDe(w, p) + '</td><td class="r num">' + L.fmtInt(s.n) + '</td><td class="r num">' + L.fmtMXN(s.v) + '</td><td><div class="row" style="flex-wrap:nowrap"><button class="btn sm" data-act="abrirFila" data-id="' + p.id + '" aria-expanded="' + ab + '">Textos</button>' + (esReal ? '<button class="btn sm" data-act="pedirBorrar" data-id="' + p.id + '" aria-label="Borrar ' + esc(p.producto) + '">Borrar</button>' : '') + '</div></td></tr>';
     if (ab) {
       const wa = L.waLink(w.meta.tel || '0000000000', p.producto, p.ref);
-      r += '<tr><td colspan="10"><div class="grid g2">' + (p.canales || []).map(c => { const t = (p.textos || {})[c] || ''; const max = L.CANALES[c].max; return '<div class="field"><label for="tx-' + p.id + c + '">' + L.CANALES[c].nombre + '</label><textarea id="tx-' + p.id + c + '" rows="6" data-chg="texto" data-id="' + p.id + '" data-c="' + c + '">' + esc(t) + '</textarea><span class="counter' + (t.length > max ? ' bad' : '') + '">' + L.fmtInt(t.length) + ' de ' + L.fmtInt(max) + ' letras</span></div>'; }).join('') + '</div><div class="row" style="margin-top:12px">' + (w.meta.tel ? '<a class="btn sm" href="' + wa + '" target="_blank" rel="noopener" data-act="clicWa">Abrir enlace de WhatsApp</a><button class="btn sm" data-act="copiarWa" data-wa="' + esc(wa) + '" data-id="' + p.id + '">Copiar enlace</button>' : '') + '<button class="btn sm" data-act="regenerar" data-id="' + p.id + '">Regenerar textos con estos datos</button><button class="btn sm pri" data-act="regMsg" data-id="' + p.id + '">Registrar un mensaje de esta publicación</button></div>' + panelRes(w, p) + '</td></tr>';
+      r += '<tr><td colspan="10"><div class="grid g2">' + (p.canales || []).map(c => { const t = (p.textos || {})[c] || ''; const max = L.CANALES[c].max; return '<div class="field"><label for="tx-' + p.id + c + '">' + L.CANALES[c].nombre + '</label><textarea id="tx-' + p.id + c + '" rows="6" data-chg="texto" data-id="' + p.id + '" data-c="' + c + '">' + esc(t) + '</textarea><span class="counter' + (t.length > max ? ' bad' : '') + '">' + L.fmtInt(t.length) + ' de ' + L.fmtInt(max) + ' letras</span></div>'; }).join('') + '</div><div class="row" style="margin-top:12px">' + (w.meta.tel ? '<a class="btn sm" href="' + wa + '" target="_blank" rel="noopener" data-act="clicWa">Abrir enlace de WhatsApp</a><button class="btn sm" data-act="copiarWa" data-wa="' + esc(wa) + '" data-id="' + p.id + '">Copiar enlace</button>' : '') + '<button class="btn sm" data-act="regenerar" data-id="' + p.id + '">Regenerar textos con estos datos</button><button class="btn sm" data-act="guionReel" data-id="' + p.id + '">Guion para reel o video</button><button class="btn sm pri" data-act="regMsg" data-id="' + p.id + '">Registrar un mensaje de esta publicación</button></div>' + '<div class="row" style="margin-top:16px;align-items:center">' + thumbP(p).replace('class="thumb', 'class="thumb lg') + '<div><b>Foto del producto</b><p class="hint">JPG, PNG o WebP. Se reduce y se guarda en este navegador.</p></div><label class="btn sm" for="foto-' + p.id + '" style="margin:0">' + (L.fotoValida(p.foto) ? 'Cambiar foto' : 'Subir foto') + '</label><input type="file" class="sr" id="foto-' + p.id + '" accept="image/jpeg,image/png,image/webp" data-chg="foto" data-id="' + p.id + '">' + (L.fotoValida(p.foto) ? '<button class="btn sm" data-act="quitarFoto" data-id="' + p.id + '">Quitar foto</button>' : '') + '</div>' + panelRes(w, p) + '</td></tr>';
     }
     return r;
   }).join('');
@@ -207,7 +210,7 @@ const vistaCrear = () => {
   const panelSC = '<section class="panel" aria-label="Autoverificación"><div class="phead"><div><h2>Autoverificación</h2><p class="muted" style="font-size:14px">Prueba cada tipo de entrada con un ejemplo real y compara contra el resultado esperado.</p></div><div class="row"><span id="sc-badge">' + badgeSC() + '</span><button class="btn sm" data-act="reverificar">Volver a verificar</button></div></div><div id="sc-lista">' + listaSC() + '</div></section>';
   return '<div class="wrap stack" style="padding-top:20px"><div class="phead" style="margin-bottom:0"><div><h1 class="disp" style="font-size:32px">Crear publicaciones con enlace de WhatsApp</h1><p class="muted">Aceptamos: un producto por formulario, o hasta 50 productos pegando o subiendo un CSV (UTF-8, columnas producto y precio; opcionales descripcion y oferta; separado por comas o punto y coma).</p></div></div><div class="grid g2" style="align-items:start"><section class="panel stack"><div class="seg" role="group" aria-label="Tipo de entrada"><button data-act="tab" data-v="uno" aria-pressed="' + (S.tab === 'uno') + '">Un producto</button><button data-act="tab" data-v="csv" aria-pressed="' + (S.tab === 'csv') + '">Varios productos (CSV)</button></div>' +
     '<div class="grid g2">' + inp('negocio', 'Nombre de tu negocio', f.negocio) + inp('ciudad', 'Ciudad y estado (opcional)', f.ciudad, 'placeholder="Celaya, Guanajuato"') + inp('tel', 'WhatsApp del negocio (10 dígitos)', f.tel, 'inputmode="tel" placeholder="461 000 0123"') + '</div>' +
-    (S.tab === 'uno' ? '<div class="grid g2">' + inp('producto', 'Producto o promoción', f.producto) + inp('precio', 'Precio en MXN, IVA incluido (opcional)', f.precio, 'inputmode="decimal"') + '</div><div class="field"><label for="f-descripcion">Descripción (opcional)</label><textarea id="f-descripcion" rows="2">' + esc(f.descripcion) + '</textarea>' + campoErr('descripcion') + '</div>' + inp('oferta', 'Oferta (opcional)', f.oferta, 'placeholder="Lleva 2 por $149.00"')
+    (S.tab === 'uno' ? '<div class="grid g2">' + inp('producto', 'Producto o promoción', f.producto) + inp('precio', 'Precio en MXN, IVA incluido (opcional)', f.precio, 'inputmode="decimal"') + '</div><div class="field"><label for="f-descripcion">Descripción (opcional)</label><textarea id="f-descripcion" rows="2">' + esc(f.descripcion) + '</textarea>' + campoErr('descripcion') + '</div>' + inp('oferta', 'Oferta (opcional)', f.oferta, 'placeholder="Lleva 2 por $149.00"') + '<div class="field"><label for="f-foto">Foto del producto (opcional)</label><div class="row" style="align-items:center">' + (S.fotoNueva ? '<img class="thumb lg" src="' + S.fotoNueva + '" alt="Foto elegida"><button class="btn sm" data-act="quitarFotoNueva">Quitar</button>' : '') + '<input type="file" id="f-foto" accept="image/jpeg,image/png,image/webp" data-chg="fotoNueva" style="width:auto"></div>' + campoErr('foto') + '</div>'
       : '<div class="field"><label for="f-csv">Pega tu CSV aquí</label><textarea id="f-csv" rows="7" class="mono">' + esc(f.csv) + '</textarea>' + campoErr('csv') + '</div><div class="field"><label for="f-archivo">…o elige un archivo .csv</label><input type="file" id="f-archivo" accept=".csv,text/csv" data-chg="archivo"></div>') +
     '<div class="grid g2"><div class="field"><label for="f-ocasion">Fecha especial</label><select id="f-ocasion">' + L.OCASIONES.map(o => '<option value="' + o.id + '"' + (f.ocasion === o.id ? ' selected' : '') + '>' + o.n + '</option>').join('') + '</select></div><div class="field"><label for="f-tono">Tono</label><select id="f-tono">' + [['cercano', 'Cercano'], ['formal', 'Formal'], ['divertido', 'Divertido']].map(([v, t]) => '<option value="' + v + '"' + (f.tono === v ? ' selected' : '') + '>' + t + '</option>').join('') + '</select></div>' + inp('fecha', 'Fecha de publicación (DD/MM/AAAA)', f.fecha, 'inputmode="numeric"') + inp('hora', 'Hora (24 h, hora de la Ciudad de México)', f.hora, 'inputmode="numeric"') + '</div>' +
     '<fieldset style="border:1px solid var(--line);border-radius:10px;padding:10px 14px"><legend class="muted" style="font-size:14px">Canales</legend><div class="row">' + Object.entries(L.CANALES).map(([k, c]) => '<label style="display:flex;gap:8px;align-items:center;margin:0;color:var(--text)"><input type="checkbox" class="f-canal" value="' + k + '"' + (f.canales.includes(k) ? ' checked' : '') + '> ' + c.nombre + '</label>').join('') + '</div>' + campoErr('canales') + '</fieldset>' +
@@ -220,7 +223,7 @@ const listaSC = () => '<div class="tw"><table><thead><tr><th>Tipo</th><th>Result
 const prevHtml = () => {
   if (!GEN) return '<p class="muted">Llena el formulario y toca “Generar vista previa”.</p>';
   const it = GEN.items[0]; const r = it.res;
-  return '<p class="muted" style="margin-bottom:10px">' + (GEN.items.length > 1 ? 'Mostrando la primera de ' + GEN.items.length + ' publicaciones. ' : '') + 'Referencia <span class="mono">' + esc(r.ref) + '</span></p><div class="stack">' + r.resultados.map(x => '<div><div class="row" style="justify-content:space-between"><b>' + x.nombre + '</b><span class="counter' + (x.ok ? '' : ' bad') + '">' + L.fmtInt(x.largo) + ' de ' + L.fmtInt(x.max) + ' letras</span></div><div class="post-prev">' + esc(x.texto) + '</div><div class="row" style="margin-top:6px"><button class="btn sm" data-act="copiarTexto" data-c="' + x.canal + '">Copiar texto</button></div></div>').join('') + '</div><div class="row" style="margin-top:14px"><a class="btn sm" href="' + r.wa + '" target="_blank" rel="noopener" data-act="clicWa">Probar el enlace de WhatsApp</a><button class="btn sm" data-act="copiarWa" data-wa="' + esc(r.wa) + '">Copiar enlace</button>' + (Store.caps.sample ? '<button class="btn sm" data-act="ia">Reescribir con IA</button>' : '') + '</div>' +
+  return '<p class="muted" style="margin-bottom:10px">' + (GEN.items.length > 1 ? 'Mostrando la primera de ' + GEN.items.length + ' publicaciones. ' : '') + 'Referencia <span class="mono">' + esc(r.ref) + '</span></p><div class="stack">' + r.resultados.map(x => '<div><div class="row" style="justify-content:space-between"><b>' + x.nombre + '</b><span class="counter' + (x.ok ? '' : ' bad') + '">' + L.fmtInt(x.largo) + ' de ' + L.fmtInt(x.max) + ' letras</span></div><div class="post-prev">' + esc(x.texto) + '</div><div class="row" style="margin-top:6px"><button class="btn sm" data-act="copiarTexto" data-c="' + x.canal + '">Copiar texto</button></div></div>').join('') + '</div><div class="row" style="margin-top:14px"><a class="btn sm" href="' + r.wa + '" target="_blank" rel="noopener" data-act="clicWa">Probar el enlace de WhatsApp</a><button class="btn sm" data-act="copiarWa" data-wa="' + esc(r.wa) + '">Copiar enlace</button><button class="btn sm" data-act="guionReelGen">Guion para reel o video</button>' + (Store.caps.sample ? '<button class="btn sm" data-act="ia">Reescribir con IA</button>' : '') + '</div>' +
     (GEN.items.length > 1 ? '<div class="tw" style="margin-top:12px">' + tablaHtml(['Producto', 'Precio', 'Referencia', 'Fecha'], GEN.items.map(x => [x.res.datos.producto, x.res.datos.precio === null ? 'Sin precio' : L.fmtMXN(x.res.datos.precio), x.res.ref, L.fmtDate(x.res.datos.fecha)])) + '</div>' : '') +
     '<div class="row" style="margin-top:14px"><button class="btn pri" data-act="guardarGen">Guardar en mi calendario</button></div><hr style="border:0;border-top:1px solid var(--line);margin:16px 0"><h3>Exportar</h3><p class="muted" style="font-size:14px;margin:4px 0 10px">' + (SC.ok ? 'CSV para tu calendario y Excel para tu contador (ventas con IVA desglosado de forma referencial).' : 'Bloqueada: la autoverificación no pasó.') + '</p><div class="row"><button class="btn sm" data-act="exp" data-t="csv"' + (SC.ok ? '' : ' disabled') + '>Calendario (CSV)</button><button class="btn sm" data-act="exp" data-t="xls"' + (SC.ok ? '' : ' disabled') + '>Para el contador (Excel)</button></div>';
 };
@@ -313,6 +316,26 @@ const copiar = async (t, ok = 'Copiado.') => { try { await navigator.clipboard.w
 const modal = html => { cerrar(); const d = document.createElement('div'); d.className = 'veil'; d.id = 'veil'; d.innerHTML = '<div class="modal" role="dialog" aria-modal="true">' + html + '</div>'; document.body.appendChild(d); const f = d.querySelector('input,select,textarea,button'); if (f) f.focus(); };
 const cerrar = () => { const v = $('#veil'); if (v) v.remove(); };
 
+const mostrarReel = g => {
+  if (!g || !g.ok) return toast('No pude armar el guion: ' + Object.values(g && g.errores || {})[0]); REEL = g;
+  modal('<h2>Guion para reel o video</h2><p class="muted" style="margin:4px 0 12px">Para un video vertical de unos 25 segundos. Es una guía: cámbiala con tus palabras.</p><div class="stack"><div><b>Ganchos para elegir (la primera frase del video)</b><ol style="margin:6px 0 0;padding-left:20px" class="muted">' + g.ganchos.map(x => '<li>' + esc(x) + '</li>').join('') + '</ol></div><div class="tw"><table><thead><tr><th>Cuándo</th><th>Qué grabar</th><th>Qué decir</th><th>Texto en pantalla</th></tr></thead><tbody>' + g.escenas.map(e => '<tr><td style="white-space:nowrap"><b>' + esc(e.tiempo) + '</b><br><span class="muted">' + esc(e.nombre) + '</span></td><td>' + esc(e.imagen) + '</td><td>' + esc(e.voz) + '</td><td>' + esc(e.pantalla) + '</td></tr>').join('') + '</tbody></table></div><div><b>Pie del video</b> <span class="counter' + (g.pieOk ? '' : ' bad') + '">' + L.fmtInt(g.pie.length) + ' de ' + L.fmtInt(g.pieMax) + ' letras</span><div class="post-prev" style="margin-top:6px">' + esc(g.pie) + '</div></div><div><b>Consejos</b><ul style="margin:6px 0 0;padding-left:20px" class="muted">' + g.consejos.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul></div><div class="row"><button class="btn pri" data-act="copiarReel">Copiar guion completo</button><button class="btn" data-act="copiarPie">Copiar solo el pie</button><button class="btn" data-act="cerrar">Cerrar</button></div></div>');
+};
+const comprimirFoto = f => new Promise((ok, mal) => {
+  if (!/^image\/(jpeg|png|webp)$/.test(f.type)) return mal(new Error('Elige una foto JPG, PNG o WebP.'));
+  if (f.size > 12000000) return mal(new Error('La foto pesa más de 12 MB. Elige una más ligera.'));
+  const u = URL.createObjectURL(f); const im = new Image();
+  im.onerror = () => { URL.revokeObjectURL(u); mal(new Error('No pude abrir esa foto.')); };
+  im.onload = () => {
+    URL.revokeObjectURL(u);
+    for (const [lado, q] of [[640, 0.8], [512, 0.7], [400, 0.6], [320, 0.5]]) {
+      const k = Math.min(1, lado / Math.max(im.width, im.height)); const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(im.width * k)); c.height = Math.max(1, Math.round(im.height * k));
+      const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(im, 0, 0, c.width, c.height);
+      const d = c.toDataURL('image/jpeg', q); if (L.fotoValida(d)) return ok(d);
+    }
+    mal(new Error('No pude reducir esa foto lo suficiente. Prueba con otra.'));
+  };
+  im.src = u;
+});
 const generarDesdeForm = () => {
   const f = leerForm(); const base = { negocio: f.negocio, ciudad: f.ciudad, tel: f.tel, ocasion: f.ocasion, tono: f.tono, canales: f.canales, hora: f.hora, spei: f.spei, clabe: f.clabe };
   let prods;
@@ -349,8 +372,8 @@ const ACT = {
   guardarGen: () => {
     if (!GEN) return; const R = getReal(S.ws); const f = leerForm();
     if (S.ws !== 'demo') R.meta = Object.assign({ id: S.ws, demo: false }, R.meta, { nombre: f.negocio, ciudad: f.ciudad, tel: GEN.items[0].res.datos.tel });
-    GEN.items.forEach((it, i) => { const d = it.res.datos; const textos = {}; it.res.resultados.forEach(x => textos[x.canal] = x.texto); const id = 'r' + Date.now().toString(36) + i; R.posts.push({ id, producto: d.producto, categoria: d.ocasion === 'ninguna' ? 'Producto' : 'Temporada', precio: d.precio, canales: d.canales, fecha: d.fecha, hora: d.hora, kind: adivinaKind(d.producto), ref: it.res.ref, estado: 'Lista para publicar', textos, creado: Date.now() + i, origen: GEN.origen }); S.nuevoId = id; evento('publicacion_creada', { postId: id, producto: d.producto, canal: d.canales.join(','), origen: GEN.origen }); });
-    guardar(); toast('Guardada. Ya aparece en la actividad en vivo y en Publicaciones.'); GEN = null; $('#prev').innerHTML = prevHtml(); S.pendienteFeed = true;
+    GEN.items.forEach((it, i) => { const d = it.res.datos; const textos = {}; it.res.resultados.forEach(x => textos[x.canal] = x.texto); const id = 'r' + Date.now().toString(36) + i; R.posts.push({ id, producto: d.producto, categoria: d.ocasion === 'ninguna' ? 'Producto' : 'Temporada', precio: d.precio, canales: d.canales, fecha: d.fecha, hora: d.hora, kind: adivinaKind(d.producto), ref: it.res.ref, estado: 'Lista para publicar', textos, creado: Date.now() + i, origen: GEN.origen, foto: (GEN.origen === 'formulario' && i === 0 && L.fotoValida(S.fotoNueva)) ? S.fotoNueva : undefined }); S.nuevoId = id; evento('publicacion_creada', { postId: id, producto: d.producto, canal: d.canales.join(','), origen: GEN.origen }); });
+    if (guardar() === false) toast('Se guardó, pero este navegador no tiene espacio para guardar tus datos. Descarga un respaldo.', 7000); else toast('Guardada. Ya aparece en la actividad en vivo y en Publicaciones.'); S.fotoNueva = null; GEN = null; $('#prev').innerHTML = prevHtml(); S.pendienteFeed = true;
   },
   exp: async t => {
     if (!SC.ok) return toast('Exportación bloqueada: la autoverificación no pasó.'); const w = getWS(S.ws); const tipo = t.dataset.t;
@@ -387,6 +410,32 @@ const ACT = {
     cerrar(); S.flash = { dow: t.dow, h: t.h }; S.nuevoId = m.id; S.keep = true; render(); toast(hay ? 'Venta registrada. Ya está en la actividad en vivo.' : 'Mensaje registrado. Ya está en la actividad en vivo.');
   },
   cerrar,
+  pedirBorrar: t => {
+    const w = getWS(S.ws); const p = w.byId[t.dataset.id]; if (!p) return; const ms = w.R.msgs.filter(m => m.postId === p.id); const ventas = ms.filter(m => m.venta > 0);
+    modal('<h2>¿Borrar esta publicación?</h2><p style="margin:8px 0"><b>' + esc(p.producto) + '</b> <span class="muted">(' + esc(p.ref) + ')</span></p><p class="muted" style="margin-bottom:12px">Se quitará de Publicaciones y de las gráficas.' + (ms.length ? ' También se borran sus <b style="color:var(--text)">' + L.fmtInt(ms.length) + ' mensaje(s)</b>' + (ventas.length ? ' y <b style="color:var(--text)">' + L.fmtInt(ventas.length) + ' venta(s) por ' + L.fmtMXN(ventas.reduce((s, m) => s + m.venta, 0)) + '</b>' : '') + ' registrados.' : '') + ' Tendrás unos segundos para deshacerlo; después, solo con un respaldo.</p><div class="row"><button class="btn pri" data-act="borrarOk" data-id="' + p.id + '">Sí, borrar</button><button class="btn" data-act="cerrar">Cancelar</button></div>');
+  },
+  borrarOk: t => {
+    const R = getReal(S.ws); const id = t.dataset.id; const i = R.posts.findIndex(x => x.id === id); if (i < 0) return cerrar();
+    const post = R.posts[i]; const msgs = R.msgs.filter(m => m.postId === id); const met = {}; Object.keys(R.metricas || {}).filter(k => k.startsWith(id + '|')).forEach(k => met[k] = R.metricas[k]);
+    UNDO = { ws: S.ws, post, i, msgs, met, edits: R.edits[id] };
+    R.posts.splice(i, 1); R.msgs = R.msgs.filter(m => m.postId !== id); Object.keys(met).forEach(k => delete R.metricas[k]); delete R.edits[id];
+    evento('publicacion_borrada', { producto: post.producto, mensajes: msgs.length }); guardar(); cerrar(); if (S.open === id) S.open = null; S.keep = true; render();
+    const e = $('#toast'); e.innerHTML = 'Publicación borrada. <button class="btn sm" data-act="deshacer" style="margin-left:8px">Deshacer</button>'; e.style.display = 'block'; clearTimeout(toast.t); toast.t = setTimeout(() => { e.style.display = 'none'; UNDO = null; }, 10000);
+  },
+  deshacer: () => {
+    if (!UNDO || UNDO.ws !== S.ws) return toast('Ya no se puede deshacer. Si tienes un respaldo, restáuralo.'); const R = getReal(S.ws); const u = UNDO; UNDO = null;
+    R.posts.splice(Math.min(u.i, R.posts.length), 0, u.post); R.msgs = R.msgs.concat(u.msgs); Object.assign(R.metricas, u.met); if (u.edits) R.edits[u.post.id] = u.edits;
+    guardar(); S.keep = true; render(); toast('Listo, la publicación volvió.');
+  },
+  quitarFoto: t => { setCampo(t.dataset.id, 'foto', null); S.keep = true; render(); toast('Foto quitada.'); },
+  quitarFotoNueva: () => { leerForm(); S.fotoNueva = null; S.keep = true; render(); },
+  guionReel: t => {
+    const w = getWS(S.ws); const p = w.byId[t.dataset.id]; if (!p) return; if (!w.meta.tel) return toast('Primero guarda una publicación con tu WhatsApp en “Crear”.');
+    mostrarReel(L.guionReel({ negocio: w.meta.nombre, ciudad: w.meta.ciudad, tel: w.meta.tel, producto: p.producto, precio: p.precio === null ? '' : p.precio, ocasion: OCASION_DE[p.producto] || 'ninguna', tono: 'cercano', canales: ['instagram'], fecha: p.fecha, hora: p.hora || '12:00', ref: p.ref }));
+  },
+  guionReelGen: () => { if (!GEN) return; const it = GEN.items[0]; mostrarReel(L.guionReel(Object.assign({}, it.input, { precio: it.res.datos.precio === null ? '' : it.res.datos.precio, ref: it.res.ref }))); },
+  copiarReel: () => { if (REEL) copiar(REEL.texto, 'Guion copiado.'); },
+  copiarPie: () => { if (REEL) copiar(REEL.pie, 'Pie del video copiado.'); },
   importarRes: () => {
     const w = getWS(S.ws); const refs = w.posts.map(p => p.ref); const r = L.importarResultadosCSV($('#imp-res').value, refs); const er = $('#er-imp');
     const errs = [...r.errores]; const ok = [];
@@ -419,6 +468,19 @@ const ACT = {
 };
 const setCampo = (id, campo, valor) => { const R = getReal(S.ws); const p = R.posts.find(x => x.id === id); if (p) p[campo] = valor; else (R.edits[id] = R.edits[id] || {})[campo] = valor; guardar(); };
 const CHG = {
+  foto: async t => {
+    const f = t.files[0]; const id = t.dataset.id; t.value = ''; if (!f) return;
+    try {
+      const url = await comprimirFoto(f); const R = getReal(S.ws); const p = R.posts.find(x => x.id === id); const prev = p ? p.foto : (R.edits[id] || {}).foto;
+      setCampo(id, 'foto', url);
+      if (guardar() === false) { setCampo(id, 'foto', prev || null); S.keep = true; render(); return toast('Este navegador no tiene espacio para otra foto. Quita alguna foto o descarga un respaldo.', 6000); }
+      S.keep = true; render(); toast('Foto guardada.');
+    } catch (e) { toast(e.message || 'No pude guardar la foto.'); }
+  },
+  fotoNueva: async t => {
+    const f = t.files[0]; t.value = ''; if (!f) return;
+    try { const url = await comprimirFoto(f); leerForm(); S.fotoNueva = url; S.keep = true; render(); toast('Foto lista. Se guardará con la publicación.'); } catch (e) { toast(e.message || 'No pude usar esa foto.'); }
+  },
   canal: t => { S.canal = t.value; S.keep = true; render(); },
   comparar: t => { S.comparar = t.checked; S.keep = true; render(); },
   archivo: t => { const f = t.files[0]; if (!f) return; if (f.size > 500000) return toast('El archivo es muy grande. El máximo es 500 KB.'); const r = new FileReader(); r.onload = () => { FORM().csv = String(r.result); S.keep = true; render(); toast('Archivo cargado: ' + f.name); }; r.readAsText(f, 'utf-8'); },
@@ -434,7 +496,7 @@ const CHG = {
     const r = new FileReader(); r.onload = () => {
       try {
         const j = JSON.parse(String(r.result)); const e = j && j.espacio;
-        const okPost = p => p && typeof p.id === 'string' && typeof p.producto === 'string' && typeof p.ref === 'string' && Array.isArray(p.canales) && typeof p.fecha === 'string';
+        const okPost = p => p && (p.foto === undefined || p.foto === null || L.fotoValida(p.foto)) && typeof p.id === 'string' && typeof p.producto === 'string' && typeof p.ref === 'string' && Array.isArray(p.canales) && typeof p.fecha === 'string';
         const okMsg = m => m && typeof m.postId === 'string' && typeof m.ts === 'number' && typeof m.canal === 'string' && L.CANALES[m.canal];
         if (!j || j.app !== 'pregon' || !e || !Array.isArray(e.posts) || !Array.isArray(e.msgs) || !e.posts.every(okPost) || !e.msgs.every(okMsg)) return toast('Ese archivo no es un respaldo de Pregón válido.');
         RESTORE = { meta: e.meta || null, posts: e.posts, msgs: e.msgs.map(m => Object.assign({}, m, { di: L.mx(m.ts).di, h: L.mx(m.ts).h, dow: L.mx(m.ts).dow })), clicks: Array.isArray(e.clicks) ? e.clicks : [], edits: e.edits && typeof e.edits === 'object' ? e.edits : {}, metricas: e.metricas && typeof e.metricas === 'object' ? e.metricas : {}, eventos: Array.isArray(e.eventos) ? e.eventos : [] };

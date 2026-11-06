@@ -51,6 +51,9 @@ Luego sube el cambio (`git commit` y `git push`) y, si Netlify está conectado a
 
 - Pregón **no publica** en redes ni envía mensajes de WhatsApp. Genera textos y enlaces `wa.me`.
 - Los datos de cada persona se guardan en su navegador. La app ofrece **Descargar respaldo** y **Restaurar respaldo** (archivo `.json`) para no perderlos y para pasarlos a otro dispositivo. Guardado en la nube y cuentas de usuario requieren un servidor.
+- Fotos del producto: se reducen en el navegador (JPG, máximo 150 KB cada una) y se guardan **solo en este navegador** y en el respaldo `.json`. No se copian a la base de datos de Claude. Si el navegador se queda sin espacio, la app avisa y no guarda la foto.
+- Borrar una publicación quita también sus mensajes y ventas registrados. Se puede deshacer durante 10 segundos; después, solo restaurando un respaldo.
+- Guion para reel o video: se arma con reglas (sin IA) a partir de los datos de la publicación. No graba ni publica nada.
 - Alcance, me gusta, guardados y clics: **no se leen solos**. Se capturan a mano o por CSV en Publicaciones y se marcan como capturados.
 - Para contar clics reales al enlace hace falta un dominio propio con un enlace corto `https://tu-dominio/r/<REF>` que registre el clic y redirija a `wa.me`. No se puede hacer dentro de un artefacto de Claude. Al migrar, sería una ruta pequeña en el servidor (variable de entorno `TRACK_BASE_URL`).
 - Lectura automática de alcance y me gusta: requiere conectar cada red con sus APIs y una cuenta autorizada (Meta, TikTok, Google). No está construido.
