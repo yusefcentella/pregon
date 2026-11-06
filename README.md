@@ -40,7 +40,7 @@ Fuera de Claude no hay base de datos: cada visitante guarda sus datos en su nave
 ## Límites conocidos
 
 - Pregón **no publica** en redes ni envía mensajes de WhatsApp. Genera textos y enlaces `wa.me`.
-- No hay facturación: no se genera CFDI ni se muestra sello o folio fiscal. Timbrado: no conectado.
+- Los datos de cada persona se guardan en su navegador. La app ofrece **Descargar respaldo** y **Restaurar respaldo** (archivo `.json`) para no perderlos y para pasarlos a otro dispositivo. Guardado en la nube y cuentas de usuario requieren un servidor.
 - Alcance, me gusta, guardados y clics: **no se leen solos**. Se capturan a mano o por CSV en Publicaciones y se marcan como capturados.
 - Para contar clics reales al enlace hace falta un dominio propio con un enlace corto `https://tu-dominio/r/<REF>` que registre el clic y redirija a `wa.me`. No se puede hacer dentro de un artefacto de Claude. Al migrar, sería una ruta pequeña en el servidor (variable de entorno `TRACK_BASE_URL`).
 - Lectura automática de alcance y me gusta: requiere conectar cada red con sus APIs y una cuenta autorizada (Meta, TikTok, Google). No está construido.

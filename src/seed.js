@@ -56,7 +56,7 @@ const factorFecha = (di, d, dim) => {
   let f = 1;
   if (d === 15) f *= 1.38; else if (d === 14 || d === 16) f *= 1.14;
   if (d === dim || d === 30) f *= 1.35; else if (d === dim - 1 || d === 29) f *= 1.12; else if (d === 1) f *= 1.1;
-  if (d >= dim - 2) f *= 1.06; // cierre de mes fiscal: pedidos con factura
+  if (d >= dim - 2) f *= 1.06; // cierre de mes fiscal: suben los pedidos de negocios
   f *= 1 + gauss(di, '2026-08-31', 2.5, 0.25) + gauss(di, '2026-09-14', 3.2, 1.3) + gauss(di, '2026-10-31', 2.8, 0.75) + gauss(di, '2026-11-14', 5, 0.2);
   return f;
 };
