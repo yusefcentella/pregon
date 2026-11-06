@@ -1,1 +1,4 @@
 node_modules/
+
+# Datos de contactos reales: no se suben a GitHub
+ventas/registro-contactos.csv
