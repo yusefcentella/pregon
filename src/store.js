@@ -56,8 +56,19 @@ const Store = (() => {
 
   // Configuración editable por el dueño (reemplaza variables de entorno en Claude)
   let cfg = Object.assign({}, CONFIG, ls.get('pregon:v1:cfg') || {});
+  // Contador del Plan Fundador: lee fundadores.json (mismo sitio). Lo actualiza una persona al confirmar cada pago.
+  const leerFundadores = async () => {
+    try {
+      const r = await fetch('fundadores.json?t=' + Date.now(), { cache: 'no-store' }); if (!r.ok) return false; const j = await r.json();
+      const total = Number(j.total), vend = Number(j.vendidos);
+      if (!Number.isInteger(total) || total < 1 || total > 1000 || !Number.isInteger(vend) || vend < 0 || vend > total) return false;
+      cfg = Object.assign({}, cfg, { FOUNDER_SEATS: total, FOUNDER_SOLD: vend, FOUNDER_UPDATED: typeof j.actualizado === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(j.actualizado) ? j.actualizado : '' });
+      return true;
+    } catch (e) { return false; }
+  };
   const cargarConfig = async () => {
     if (caps.db) { try { const d = await caps.db.doc('config/app').get(); const v = d && (typeof d.data === 'function' ? d.data() : d); if (v) { cfg = Object.assign({}, CONFIG, v); ls.set('pregon:v1:cfg', v); } } catch (e) { /* usa lo local */ } }
+    await leerFundadores();
     return cfg;
   };
   const guardarConfig = async nuevo => {
@@ -74,5 +85,5 @@ const Store = (() => {
     return 'no';
   };
 
-  return { caps, ls, init, cargarEspacio, guardarEspacio, traerEspacioRemoto, track, leerMetricas, getConfig: () => cfg, cargarConfig, guardarConfig, descargar, vacio };
+  return { caps, ls, init, cargarEspacio, guardarEspacio, traerEspacioRemoto, track, leerMetricas, getConfig: () => cfg, cargarConfig, leerFundadores, guardarConfig, descargar, vacio };
 })();

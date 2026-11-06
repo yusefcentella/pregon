@@ -647,8 +647,19 @@ const Store = (() => {
 
   // Configuración editable por el dueño (reemplaza variables de entorno en Claude)
   let cfg = Object.assign({}, CONFIG, ls.get('pregon:v1:cfg') || {});
+  // Contador del Plan Fundador: lee fundadores.json (mismo sitio). Lo actualiza una persona al confirmar cada pago.
+  const leerFundadores = async () => {
+    try {
+      const r = await fetch('fundadores.json?t=' + Date.now(), { cache: 'no-store' }); if (!r.ok) return false; const j = await r.json();
+      const total = Number(j.total), vend = Number(j.vendidos);
+      if (!Number.isInteger(total) || total < 1 || total > 1000 || !Number.isInteger(vend) || vend < 0 || vend > total) return false;
+      cfg = Object.assign({}, cfg, { FOUNDER_SEATS: total, FOUNDER_SOLD: vend, FOUNDER_UPDATED: typeof j.actualizado === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(j.actualizado) ? j.actualizado : '' });
+      return true;
+    } catch (e) { return false; }
+  };
   const cargarConfig = async () => {
     if (caps.db) { try { const d = await caps.db.doc('config/app').get(); const v = d && (typeof d.data === 'function' ? d.data() : d); if (v) { cfg = Object.assign({}, CONFIG, v); ls.set('pregon:v1:cfg', v); } } catch (e) { /* usa lo local */ } }
+    await leerFundadores();
     return cfg;
   };
   const guardarConfig = async nuevo => {
@@ -665,7 +676,7 @@ const Store = (() => {
     return 'no';
   };
 
-  return { caps, ls, init, cargarEspacio, guardarEspacio, traerEspacioRemoto, track, leerMetricas, getConfig: () => cfg, cargarConfig, guardarConfig, descargar, vacio };
+  return { caps, ls, init, cargarEspacio, guardarEspacio, traerEspacioRemoto, track, leerMetricas, getConfig: () => cfg, cargarConfig, leerFundadores, guardarConfig, descargar, vacio };
 })();
 
 /* ===== INTERFAZ ===== */
@@ -907,10 +918,15 @@ const vistaInicio = () => {
     '<section class="panel" aria-label="Ejemplo que funciona"><div class="phead"><h3>Ejemplo que funciona</h3><span>' + badgeSC() + '</span></div><div class="post-prev">' + esc(r.texto) + '</div><p class="hint">' + L.fmtInt(r.largo) + ' de ' + L.fmtInt(r.max) + ' letras en Instagram. Enlace de WhatsApp: <a href="' + ej.wa + '" target="_blank" rel="noopener" data-act="clicWa">probarlo</a></p></section></div></section>' +
     '<section class="sec"><h2>Qué hace</h2><p class="lead">Pregón no promete alcance ni “viralidad”. Te dice, con tus propios registros, qué publicaciones se convierten en mensajes y ventas.</p><div class="grid g3">' + pasos.map(x => '<div class="panel step"><b>' + x[0] + '</b><h3 style="margin:6px 0">' + x[1] + '</h3><p class="muted">' + x[2] + '</p></div>').join('') + '</div></section>' +
     '<section class="sec"><h2>Vista previa del tablero</h2><p class="lead">Son los mismos componentes que usarás en tu espacio. Aquí se ven con datos de ejemplo de un negocio ficticio, Cajetas y Dulces Doña Chela.</p><div class="stack">' + kpiTiles(c, p) + '<div class="grid main2">' + rankingPanel(w, c) + feedPanel(w, false) + '</div><div><a class="btn pri" href="#crear">Empezar gratis</a> <a class="btn" href="#demo">Ver el ejemplo completo</a></div></div></section>' +
-    '<section class="sec"><h2>Precios</h2><p class="lead">Tres planes con IVA incluido. Hoy abrimos un Plan Fundador de 20 lugares.</p><div class="grid g3">' + prec + '</div><p style="margin-top:16px"><a class="btn" href="#precios">Ver precios y Plan Fundador</a></p></section></div>' + footer();
+    '<section class="sec"><h2>Precios</h2><p class="lead">Tres planes con IVA incluido. ' + textoFundador() + '</p><div class="grid g3">' + prec + '</div><p style="margin-top:16px"><a class="btn" href="#precios">Ver precios y Plan Fundador</a></p></section></div>' + footer();
 };
 
 /* ---- precios ---- */
+const contadorFundador = cfg => {
+  const rest = Math.max(0, cfg.FOUNDER_SEATS - cfg.FOUNDER_SOLD); const pct = cfg.FOUNDER_SEATS ? cfg.FOUNDER_SOLD / cfg.FOUNDER_SEATS * 100 : 0;
+  return '<div id="contador" style="text-align:right;min-width:210px" aria-live="polite"><div class="disp num" style="font-size:40px;color:var(--accent)" id="lugares">' + rest + '</div><span class="muted">' + (rest ? 'de ' + cfg.FOUNDER_SEATS + ' lugares disponibles' : 'Lugares agotados') + '</span><div role="img" aria-label="' + cfg.FOUNDER_SOLD + ' de ' + cfg.FOUNDER_SEATS + ' lugares apartados" style="height:8px;border-radius:4px;background:var(--bg);margin-top:8px;overflow:hidden"><div style="height:100%;width:' + pct + '%;background:var(--r4);border-radius:4px"></div></div><p class="hint">' + (cfg.FOUNDER_UPDATED ? 'Actualizado el ' + L.fmtDate(cfg.FOUNDER_UPDATED) : 'Se actualiza al confirmar cada pago') + '</p></div>';
+};
+const textoFundador = () => { const c = Store.getConfig(); const r = Math.max(0, c.FOUNDER_SEATS - c.FOUNDER_SOLD); return r ? 'Plan Fundador: quedan ' + r + ' de ' + c.FOUNDER_SEATS + ' lugares.' : 'Plan Fundador: lugares agotados.'; };
 const fundadorUrl = () => Store.getConfig().FOUNDER_PAYMENT_URL || '';
 const vistaPrecios = () => {
   const cfg = Store.getConfig(); const rest = Math.max(0, cfg.FOUNDER_SEATS - cfg.FOUNDER_SOLD); const url = fundadorUrl();
@@ -919,8 +935,8 @@ const vistaPrecios = () => {
   const tablaC = [['Negocios', '1', '3', '10'], ['Publicaciones al mes', '20', '80', 'Sin límite'], ['Canales', '2', '5', '5'], ['Productos por CSV', '10', '50', '50'], ['Mensajes registrados al mes', '100', '1,000', 'Sin límite'], ['Historial', '30 días', '12 meses', '24 meses'], ['Mapa de calor por hora', 'Sí', 'Sí', 'Sí'], ['Plantillas de WhatsApp editables', '3', 'Sin límite', 'Sin límite'], ['Exportar', 'CSV', 'CSV y Excel', 'CSV y Excel'], ['Usuarios', '1', '3', '10'], ['Soporte', 'Correo', 'WhatsApp', 'WhatsApp prioritario']];
   const faq = [['¿Dónde se guardan mis datos?', 'Hoy se guardan en tu navegador, en este dispositivo. Descarga tu respaldo desde tu espacio para no perderlos y para pasarlos a otro dispositivo. No pedimos nombres ni teléfonos de tus clientes.'], ['¿Qué métodos de pago aceptan?', 'Por ahora, transferencia bancaria (SPEI), que cerramos por chat. Más adelante agregaremos pago con tarjeta.'], ['¿Qué incluye el Plan Fundador?', 'El plan Negocio completo a ' + L.fmtMXN(FOUNDER_MES) + ' al mes, IVA incluido, mientras mantengas tu suscripción, y acceso antes que nadie. Son ' + cfg.FOUNDER_SEATS + ' lugares.'], ['¿Cómo cancelo?', 'Cuando quieras, escribiéndonos por WhatsApp. Conservas tu acceso hasta el fin del periodo pagado y puedes exportar tus datos en CSV y Excel.']];
   return '<div class="wrap" style="padding-top:28px"><h1 class="disp" style="font-size:clamp(30px,4.5vw,44px)">Precios en pesos, con IVA incluido</h1><p class="muted" style="margin:8px 0 22px">Los planes regulares todavía no están disponibles. El Plan Fundador sí.</p>' +
-    '<section class="panel founder stack" aria-label="Plan Fundador"><div class="row" style="justify-content:space-between"><div><span class="chip acc">Plan Fundador</span><h2 style="margin-top:10px;font-size:28px">' + L.fmtMXN(FOUNDER_MES) + ' al mes, de por vida</h2><p class="muted">IVA incluido. Es el plan Negocio con ' + descuentoFundador() + ' % de descuento sobre ' + L.fmtMXN(PLANES[1].mes) + ' al mes.</p></div><div style="text-align:right"><div class="disp num" style="font-size:40px;color:var(--accent)" id="lugares">' + rest + '</div><span class="muted">de ' + cfg.FOUNDER_SEATS + ' lugares disponibles</span></div></div>' +
-    '<div><a class="btn pri" id="btn-fundador" ' + (ok ? 'href="' + esc(url) + '" target="_blank" rel="noopener" data-act="clicPago"' : 'aria-disabled="true" data-act="nada" role="button"') + '>' + (ok ? 'Apartar mi lugar por WhatsApp' : 'Enlace pendiente') + '</a><p class="hint" style="margin-top:8px">Te respondemos en horario laboral y cobramos por transferencia bancaria</p></div><p><b>Si no lanzamos en 60 días, te devolvemos el 100 %.</b></p><p class="hint">El contador baja solo cuando se confirma un pago: lo actualiza una persona, no un temporizador.</p></section>' +
+    '<section class="panel founder stack" aria-label="Plan Fundador"><div class="row" style="justify-content:space-between"><div><span class="chip acc">Plan Fundador</span><h2 style="margin-top:10px;font-size:28px">' + L.fmtMXN(FOUNDER_MES) + ' al mes, de por vida</h2><p class="muted">IVA incluido. Es el plan Negocio con ' + descuentoFundador() + ' % de descuento sobre ' + L.fmtMXN(PLANES[1].mes) + ' al mes.</p></div>' + contadorFundador(cfg) + '</div>' +
+    '<div><a class="btn pri" id="btn-fundador" ' + (ok ? 'href="' + esc(url) + '" target="_blank" rel="noopener" data-act="clicPago"' : 'aria-disabled="true" data-act="nada" role="button"') + '>' + (ok ? (rest ? 'Apartar mi lugar por WhatsApp' : 'Escribir para la lista de espera') : 'Enlace pendiente') + '</a><p class="hint" style="margin-top:8px">Te respondemos en horario laboral y cobramos por transferencia bancaria</p></div><p class="hint">El contador se actualiza solo en esta página cuando se confirma cada pago por transferencia. No es un temporizador ni un número inventado.</p><p class="hint"><b>Hoy funciona:</b> crear textos con enlace de WhatsApp, registrar mensajes y ventas, mapa por hora y exportar a CSV y Excel. <b>Todavía no:</b> publicar solo en las redes ni guardar tus datos en la nube.</p></section>' +
     '<div class="row" style="margin:26px 0 14px;justify-content:center"><div class="seg" role="group" aria-label="Periodo de cobro"><button data-act="ciclo" data-v="mes" aria-pressed="' + !S.anual + '">Mensual</button><button data-act="ciclo" data-v="anual" aria-pressed="' + S.anual + '">Anual: 2 meses gratis</button></div></div>' +
     '<div class="grid g3">' + PLANES.map(pl => '<div class="panel plan"><h2>' + pl.n + '</h2><div class="pr num">' + L.fmtMXN(precio(pl)) + '<span class="muted" style="font:400 15px var(--body)"> ' + (S.anual ? 'al año' : 'al mes') + '</span></div><span class="muted" style="font-size:13px">IVA incluido' + (S.anual ? ' · ' + L.fmtMXN(pl.mes * 10 / 12) + ' al mes' : '') + '</span><p class="muted">' + pl.para + '</p><ul>' + pl.f.slice(0, 5).map(x => '<li>· ' + x + '</li>').join('') + '</ul><a class="btn" href="#crear">Disponible pronto</a></div>').join('') + '</div>' +
     '<section class="panel" style="margin-top:16px"><h2 style="margin-bottom:12px">Compara los planes</h2><div class="tw">' + tablaHtml(['', 'Arranque', 'Negocio', 'Crece'], tablaC) + '</div></section>' +
@@ -1132,8 +1148,12 @@ document.addEventListener('pointermove', e => {
   if (txt) { tp.textContent = txt; tp.style.display = 'block'; tp.style.left = Math.min(e.clientX + 14, innerWidth - 290) + 'px'; tp.style.top = (e.clientY + 14) + 'px'; } else tp.style.display = 'none';
 });
 setInterval(() => document.querySelectorAll('[data-ts]').forEach(e => { e.textContent = relLabel(+e.dataset.ts, e.dataset.real === '1'); }), 5000);
+setInterval(async () => {
+  const c0 = Store.getConfig(), antes = c0.FOUNDER_SEATS + '/' + c0.FOUNDER_SOLD; if (!(await Store.leerFundadores())) return;
+  const c1 = Store.getConfig(); if (c1.FOUNDER_SEATS + '/' + c1.FOUNDER_SOLD !== antes && ['precios', 'inicio'].includes(S.route)) { S.keep = true; render(); toast('Se actualizó el contador de lugares.'); }
+}, 60000);
 window.addEventListener('hashchange', ruta);
-Store.init().then(async () => { await Store.cargarConfig(); if (S.route === 'metricas' || S.route === 'precios') render(); });
+Store.init().then(async () => { await Store.cargarConfig(); if (['metricas', 'precios', 'inicio'].includes(S.route)) render(); });
 ruta();
 
 </script>

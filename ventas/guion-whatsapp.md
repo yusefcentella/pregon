@@ -34,7 +34,7 @@ Reglas para todos los mensajes:
 
 ## 5. Ofrecer el Plan Fundador
 
-> Estoy abriendo 20 lugares de fundador: $219 al mes de por vida, IVA incluido, en vez de $399. Si no lanzo en 60 días, te devuelvo el 100 %. El pago es por transferencia. ¿Quieres apartar tu lugar?
+> Estoy abriendo 20 lugares de fundador: $219 al mes de por vida, IVA incluido, en vez de $399. El pago es por transferencia. ¿Quieres apartar tu lugar?
 
 ## 6. Si dice que sí
 
@@ -51,7 +51,7 @@ Después:
 > Entiendo. El precio de fundador solo sirve para estos 20 lugares y después sube a $399. Si prefieres, te dejo el enlace y lo ves con calma, sin presión.
 
 **"¿Y si no funciona o no me sirve?"**
-> Si no lanzo en 60 días, te devuelvo todo. Y si después de usarlo no te sirve, cancelas cuando quieras y conservas tu acceso hasta que termine el periodo que pagaste.
+> Cancelas cuando quieras y conservas tu acceso hasta que termine el periodo que pagaste.
 
 **"¿Se conecta con mi Instagram?"**
 > Todavía no. Hoy tú copias el texto y lo publicas, y los resultados se capturan a mano. La conexión automática es algo que quiero construir si hay suficientes personas interesadas.

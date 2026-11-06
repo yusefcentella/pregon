@@ -37,6 +37,16 @@ La página es un solo archivo estático. `node build.cjs` lo escribe en `dist/in
 
 Fuera de Claude no hay base de datos: cada visitante guarda sus datos en su navegador, no se cuentan visitas de todos y `/metricas` solo muestra lo de ese navegador. Ver "Qué depende de Claude".
 
+## Contador de lugares del Plan Fundador
+
+La página lee `fundadores.json` (en `docs/`) al cargar y cada minuto, y muestra los lugares que quedan, una barra y la fecha de actualización. Para cambiarlo tras confirmar un pago:
+
+```bash
+node scripts/fundador.cjs 3
+```
+
+Luego sube el cambio (`git commit` y `git push`) y, si Netlify está conectado a GitHub, el sitio se actualiza solo. Una persona confirma cada pago por SPEI; el contador no detecta pagos por sí mismo. Detectarlos solo requeriría una pasarela de pago con avisos automáticos y un servidor.
+
 ## Límites conocidos
 
 - Pregón **no publica** en redes ni envía mensajes de WhatsApp. Genera textos y enlaces `wa.me`.
